@@ -119,6 +119,31 @@ The demo covers: happy path, KYC decline with recovery, partial BNPL split, part
 | `check_bnpl_eligibility` | Evaluate 5 rules (KYC, credit tier, cart limit, merchant, velocity) and return a structured decision with reason codes, risk signals, EMI terms, and recovery options. |
 | `initiate_bnpl_checkout` | Initiate a BNPL checkout for an approved decision. Supports `partner_behavior` param for testing (success, decline, transient_failure, timeout, duplicate). |
 
+## Eligibility Rules
+
+Every eligibility check evaluates **all 5 rules** — no short-circuiting. A decision is APPROVED only if all pass. Each failure produces a machine-readable reason code and, where applicable, a recovery option.
+
+| Rule | Signal | Pass Condition | On Fail | Recovery |
+|------|--------|---------------|---------|----------|
+| R1: KYC Status | `user.kyc_status` | Must be `completed` | `KYC_INCOMPLETE` | Inline KYC completion CTA |
+| R2: Credit Tier | `user.credit_tier` | SILVER or above | `CREDIT_TIER_INSUFFICIENT` | Upgrade path guidance |
+| R3: Cart Value | `cart_value` vs `user.max_bnpl_limit` | Cart ≤ limit | `CART_VALUE_EXCEEDS_LIMIT` | Partial BNPL split (only if sole failure) |
+| R4: Merchant | `merchant.bnpl_enabled` | Must be `true` | `MERCHANT_NOT_ELIGIBLE` | Suggest alternative deals |
+| R5: Velocity | Checks in last 60 min | Must be < 5 | `VELOCITY_LIMIT_EXCEEDED` | No recovery (abuse category) |
+
+### Credit Tiers
+
+Credit tiers represent a user's trust level within the BNPL system. In production, tiers would be derived from repayment history, transaction frequency, account age, and external credit signals. In the prototype, they are static attributes on each test user.
+
+| Tier | BNPL Eligible | Represents | Test User | BNPL Limit |
+|------|:------------:|------------|-----------|------------|
+| PLATINUM | Yes | Highest trust — long history, high reliability | Meera Patel | ₹50,000 |
+| GOLD | Yes | Good standing — established, clean record | Priya Sharma | ₹20,000 |
+| SILVER | Yes | Minimum qualifying — newer but verified | Rahul Verma | ₹10,000 |
+| BRONZE | No | Insufficient trust — too new or limited history | Vikram Singh | ₹5,000 |
+
+The tier check (R2) and cart limit check (R3) are **separate rules** — a GOLD user with a ₹20K limit buying ₹25K of goods passes the tier check but fails the cart limit check, and is offered a partial BNPL split.
+
 ## Project Structure
 
 ```
