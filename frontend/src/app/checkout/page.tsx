@@ -353,7 +353,7 @@ export default function CheckoutPage() {
                     const messages: Record<string, string> = {
                       KYC_INCOMPLETE: "Complete your KYC verification to unlock BNPL.",
                       CREDIT_TIER_INSUFFICIENT: "Your account needs a higher trust level for BNPL. Complete more transactions to upgrade.",
-                      CART_VALUE_EXCEEDS_LIMIT: `Your BNPL limit is \u20b9${Number(eligibility.risk_signals?.cart_value_limit?.input?.limit || 0).toLocaleString("en-IN")}. The cart value exceeds this limit.`,
+                      CART_VALUE_EXCEEDS_LIMIT: `Your BNPL limit is \u20b9${Number((eligibility.risk_signals?.cart_value_limit?.input as Record<string, number>)?.limit || 0).toLocaleString("en-IN")}. The cart value exceeds this limit.`,
                       MERCHANT_NOT_ELIGIBLE: "BNPL is not available for this merchant yet.",
                       VELOCITY_LIMIT_EXCEEDED: (() => {
                         const vi = eligibility.risk_signals?.velocity_check?.input as Record<string, number> | undefined;
