@@ -57,12 +57,67 @@ npm run dev
 # Opens at http://localhost:3000
 ```
 
-### 5. MCP Server (optional)
+### 5. MCP Server
+
+The MCP server exposes `check_bnpl_eligibility` and `initiate_bnpl_checkout` as [Model Context Protocol](https://modelcontextprotocol.io/) tools, enabling AI assistants (Claude Desktop, Claude Code, custom agents) to interact with the BNPL system programmatically.
+
+**Note:** The backend (step 3) must be running for checkout functionality, as the MCP server delegates checkout dispatch to the backend's REST API.
+
+#### Option A: Standalone (SSE transport)
 
 ```bash
 cd backend
-python -m mcp.server
+source .venv/bin/activate
+python -m mcp_server.server --transport sse
+# Runs on http://localhost:8001/sse
 ```
+
+#### Option B: Claude Desktop integration (stdio transport)
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "grabcredit": {
+      "command": "/path/to/grabcredit/backend/.venv/bin/python",
+      "args": ["/path/to/grabcredit/backend/mcp_server/server.py"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The tools will appear in Claude's tool list.
+
+#### Option C: Claude Code CLI
+
+```bash
+claude mcp add grabcredit -- /path/to/grabcredit/backend/.venv/bin/python /path/to/grabcredit/backend/mcp_server/server.py
+```
+
+#### MCP Demo Script
+
+Run the automated demo that connects as an MCP client and exercises 5 scenarios end-to-end:
+
+```bash
+cd backend
+source .venv/bin/activate
+
+# Start the MCP server in the background
+python -m mcp_server.server --transport sse &
+
+# Run the demo (backend must also be running on port 8000)
+python demo_mcp.py
+```
+
+The demo covers: happy path, KYC decline with recovery, partial BNPL split, partner decline, and transient failure with retry.
+
+#### MCP Tools Reference
+
+| Tool | Description |
+|------|-------------|
+| `check_bnpl_eligibility` | Evaluate 5 rules (KYC, credit tier, cart limit, merchant, velocity) and return a structured decision with reason codes, risk signals, EMI terms, and recovery options. |
+| `initiate_bnpl_checkout` | Initiate a BNPL checkout for an approved decision. Supports `partner_behavior` param for testing (success, decline, transient_failure, timeout, duplicate). |
 
 ## Project Structure
 
@@ -89,7 +144,8 @@ grabcredit/
 │   ├── partner/
 │   ├── webhooks/
 │   ├── api/
-│   └── mcp/
+│   ├── mcp_server/
+│   └── demo_mcp.py
 └── frontend/          # Next.js
     └── src/
         ├── app/
@@ -102,11 +158,20 @@ grabcredit/
 
 The prototype ships with 11 pre-built scenarios covering every code path. See `CLAUDE.md` or `docs/PRD.md` Section 11.2 for the full list.
 
+## Live Demo
+
+| Surface | URL |
+|---------|-----|
+| Frontend (Vercel) | https://grabcredit-frontend.vercel.app |
+| Backend API (Render) | https://grabcredit-backend.onrender.com |
+| MCP Server | Local only — see setup above |
+
 ## Documentation
 
 - [Product Requirements Document](docs/PRD.md)
 - [API Contracts](docs/API_CONTRACTS.md)
 - [QA Plan](docs/QA_PLAN.md)
+- [QA Test Results](docs/QA_TEST_RESULTS.md) — 41/41 tests passing
 - [Observability Plan](docs/OBSERVABILITY_PLAN.md)
 - [Rollout Plan](docs/ROLLOUT_PLAN.md)
 
