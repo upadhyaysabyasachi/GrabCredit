@@ -31,10 +31,13 @@ app = FastAPI(
 
 # CORS — allow frontend origins (env-driven for deployment)
 _default_origins = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", _default_origins).split(",")
+_cors_env = os.getenv("CORS_ORIGINS", _default_origins)
+CORS_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
+logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in CORS_ORIGINS],
+    allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"https://grabcredit.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
