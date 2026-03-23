@@ -49,11 +49,12 @@ grabcredit/
 │   │   ├── webhook.py         # POST /api/webhook/partner-callback
 │   │   ├── dashboard.py       # GET endpoints for operator dashboard
 │   │   └── simulator.py       # GET/POST endpoints for scenario simulator
-│   └── mcp/
-│       └── server.py          # MCP server with check_bnpl_eligibility and initiate_bnpl_checkout
+│   ├── mcp_server/
+│   │   └── server.py          # MCP server with check_bnpl_eligibility and initiate_bnpl_checkout
+│   └── demo_mcp.py            # Automated MCP demo script (connects as MCP client, runs 5 scenarios)
 ├── frontend/
 │   ├── package.json
-│   ├── next.config.js
+│   ├── next.config.mjs
 │   ├── tailwind.config.ts
 │   ├── tsconfig.json
 │   ├── src/
@@ -71,14 +72,6 @@ grabcredit/
 │   │   │       └── callbacks/
 │   │   │           └── page.tsx     # Callback logs view
 │   │   ├── components/
-│   │   │   ├── EligibilityResult.tsx
-│   │   │   ├── CheckoutFlow.tsx
-│   │   │   ├── RecoveryOptions.tsx
-│   │   │   ├── EMITermsCard.tsx
-│   │   │   ├── DecisionLogTable.tsx
-│   │   │   ├── CheckoutStatusTable.tsx
-│   │   │   ├── CallbackLogTable.tsx
-│   │   │   ├── ScenarioForm.tsx
 │   │   │   ├── JsonViewer.tsx
 │   │   │   └── StatusBadge.tsx
 │   │   ├── lib/
@@ -110,7 +103,7 @@ grabcredit/
 13. **Operator Dashboard** — Decision logs table, checkout status view, callback logs with duplicate flags.
 
 ### Phase 3: MCP Server & Polish
-14. **MCP Server** — `mcp/server.py` exposing `check_bnpl_eligibility` and `initiate_bnpl_checkout` tools.
+14. **MCP Server** — `mcp_server/server.py` exposing `check_bnpl_eligibility` and `initiate_bnpl_checkout` tools. Supports stdio (Claude Desktop) and SSE (standalone) transports. `initiate_bnpl_checkout` delegates to the backend REST API for partner dispatch.
 15. **End-to-end testing** — Run through all 11 pre-built demo scenarios from PRD Section 11.2.
 16. **Production handoff docs** — Complete `docs/` folder.
 
@@ -167,7 +160,10 @@ grabcredit/
 - `eligibility_decisions.risk_signals`, `emi_terms`, `recovery_options` are `JSONB`.
 - `checkout_attempts.idempotency_key` has a `UNIQUE` constraint.
 - `callback_logs.is_duplicate` is `BOOLEAN DEFAULT false`.
+- `callback_logs.is_late` is `BOOLEAN DEFAULT false` (callback arrived after terminal state).
+- `checkout_attempts.emi_tenure_months` is `INTEGER` (selected EMI tenure).
 - Index `velocity_events` on `(user_id, created_at)` for fast lookups.
+- Database uses `grabcredit` schema (not `public`) to isolate from other Supabase data.
 
 ## Environment Variables
 
@@ -177,6 +173,7 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 BACKEND_URL=http://localhost:8000
 NEXT_PUBLIC_API_URL=http://localhost:8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001  # comma-separated, env-driven for deployment
 ```
 
 ## Commands
@@ -192,9 +189,48 @@ cd frontend
 npm install
 npm run dev
 
-# MCP Server
+# MCP Server (standalone SSE on port 8001)
 cd backend
-python -m mcp.server
+source .venv/bin/activate
+python -m mcp_server.server --transport sse
+
+# MCP Server (stdio for Claude Desktop / Claude Code)
+python -m mcp_server.server
+
+# MCP Demo (requires backend + MCP server running)
+python demo_mcp.py
+```
+
+### Claude Desktop Integration
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "grabcredit": {
+      "command": "/path/to/grabcredit/backend/.venv/bin/python",
+      "args": ["/path/to/grabcredit/backend/mcp_server/server.py"]
+    }
+  }
+}
+```
+
+### Claude Code CLI Integration
+
+```bash
+claude mcp add grabcredit -- /path/to/grabcredit/backend/.venv/bin/python /path/to/grabcredit/backend/mcp_server/server.py
+```
+
+### Deployment
+
+```bash
+# Frontend: Vercel (root directory: frontend)
+# Set NEXT_PUBLIC_API_URL to deployed backend URL
+
+# Backend: Render (root directory: backend)
+# Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BACKEND_URL, CORS_ORIGINS
+# Start command: uvicorn main:app --host 0.0.0.0 --port $PORT
+# Python version: 3.12 (via .python-version)
 ```
 
 ## Pre-Seeded Test Data (from sql/002_seed_data.sql)
