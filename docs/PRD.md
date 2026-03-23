@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Author** | GrabOn TPM Challenge Submission |
+| **Author** | GrabOn Interview Assignment - GrabCredit |
 | **Version** | 1.0 |
 | **Date** | March 2026 |
 | **Status** | DRAFT — Prototype |

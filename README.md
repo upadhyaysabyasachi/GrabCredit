@@ -1,6 +1,6 @@
 # GrabCredit — BNPL Eligibility & Checkout (Explainable)
 
-A prototype BNPL (Buy Now Pay Later) eligibility and checkout system for GrabOn's deal platform. Built as part of the GrabOn TPM Challenge 2025.
+A prototype BNPL (Buy Now Pay Later) eligibility and checkout system for GrabOn's deal platform. Built as part of the GrabOn Interview Assignment - GrabCredit.
 
 ## What This Does
 
@@ -202,4 +202,4 @@ The prototype ships with 11 pre-built scenarios covering every code path. See `C
 
 ## License
 
-Confidential — GrabOn TPM Challenge Submission
+Confidential — GrabOn Interview Assignment
