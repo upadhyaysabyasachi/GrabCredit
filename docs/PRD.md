@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Author** | GrabOn Interview Assignment - GrabCredit |
+| **Author** | Sabyasachi Upadhyay |
 | **Version** | 1.0 |
 | **Date** | March 2026 |
 | **Status** | DRAFT — Prototype |
